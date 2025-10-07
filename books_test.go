@@ -3,6 +3,9 @@ package books_test
 import (
 	"books"
 	"cmp"
+	"encoding/json"
+	"io"
+	"net/http"
 	"slices"
 	"testing"
 )
@@ -185,6 +188,36 @@ func TestSetCopies_IsRaceFree(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func TestServerListAllBooks(t *testing.T) {
+	t.Parallel()
+	catalog := getTestCatalog()
+	catalog.Path = t.TempDir() + "/catalog"
+	go func() {
+		err := books.ListenAndServe(":3000", catalog)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	resp, err := http.Get("http://localhost:3000/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected status %d", resp.StatusCode)
+	}
+	booklist := []books.Book{}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = json.Unmarshal(data, &booklist)
+	if err != nil {
+		t.Fatalf("%v in %q", err, data)
+	}
+	assertTestBooks(t, booklist)
 }
 
 func getTestCatalog() *books.Catalog {
