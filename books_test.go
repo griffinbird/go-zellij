@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"slices"
 	"testing"
@@ -265,4 +266,14 @@ func assertTestBooks(t *testing.T, got []books.Book) {
 	if !slices.Equal(want, got) {
 		t.Fatalf("want %#v, got %#v", want, got)
 	}
+}
+
+func randomLocalAddress(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	return l.Addr().String()
 }
